@@ -9,6 +9,11 @@ class QuestionnaireQuestion extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'question_id',
+        'questionnaire_id'
+    ];
+
     // Define the many-to-many relationship with the Question model
     public function question()
     {

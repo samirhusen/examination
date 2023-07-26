@@ -9,6 +9,11 @@ class Questionnaire extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'title',
+        'expiry_date'
+    ];
+
     // Define the one-to-many relationship with the StudentQuestionnaire model
     public function studentQuestionnaires()
     {
