@@ -6,6 +6,7 @@ use App\Models\Question;
 use Illuminate\Http\Request;
 use App\Models\Questionnaire;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Events\QuestionnaireCreated;
 use App\Models\QuestionnaireQuestion;
 use App\Http\Requests\QuestionnaireRequest;
@@ -34,35 +35,48 @@ class QuestionnaireController extends Controller
      */
     public function store(QuestionnaireRequest $request)
     {
-        $validated = $request->validated();
+        try {
+            $validated = $request->validated();
 
-        // Create the questionnaire
-        $questionnaire = Questionnaire::create($validated);
+            // Create the questionnaire
+            $questionnaire = Questionnaire::create($validated);
 
-        $physicsQuestions = Question::inRandomOrder()
-            ->where('subject_id', 1) // Assuming Physics subject_id is 1
-            ->limit(5)
-            ->get();
+            $physicsQuestions = Question::inRandomOrder()
+                ->where('subject_id', 1) // physics subject_id is 1
+                ->limit(5)
+                ->get();
 
-        $chemistryQuestions = Question::inRandomOrder()
-            ->where('subject_id', 2) // Assuming Chemistry subject_id is 2
-            ->limit(5)
-            ->get();
+            $chemistryQuestions = Question::inRandomOrder()
+                ->where('subject_id', 2) // chemistry subject_id is 2
+                ->limit(5)
+                ->get();
 
-        // Combine the selected questions
-        $selectedQuestions = $physicsQuestions->merge($chemistryQuestions);
+            // Combine the selected questions
+            $selectedQuestions = $physicsQuestions->merge($chemistryQuestions);
 
-        // Associate the random questions with the questionnaire using a transaction
-        DB::transaction(function () use ($questionnaire, $selectedQuestions) {
+            DB::beginTransaction();
+
+            // random questions with the questionnaire
             foreach ($selectedQuestions as $question) {
                 QuestionnaireQuestion::create([
                     'question_id' => $question->id,
                     'questionnaire_id' => $questionnaire->id,
                 ]);
             }
-        });
 
-        event(new QuestionnaireCreated($questionnaire));
+            DB::commit();
+
+            // event for questionnaire creation
+            event(new QuestionnaireCreated($questionnaire));
+
+            Log::info('Questionnaire created successfully', ['questionnaire_id' => $questionnaire->id]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('Failed to create questionnaire', [
+                'error_message' => $e->getMessage(),
+            ]);
+        }
 
         return redirect()->route('question.index');
     }

@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Questionnaire;
 use Illuminate\Http\Request;
+use App\Models\Questionnaire;
 use App\Models\StudentResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\StudentQuestionnaire;
 use App\Models\QuestionnaireQuestion;
@@ -38,20 +39,42 @@ class QuestionnaireResponseController extends Controller
         $existingResponse = $this->checkResponseExistsForSameQuestionnaire($questionnaireId, $studentId);
 
         if (!$existingResponse) {
-            // Create a new student questionnaire entry
-            $studentQuestionnaire = StudentQuestionnaire::create([
-                'student_id' => $studentId,
-                'questionnaire_id' => $questionnaireId,
-            ]);
 
-            // Save the student's responses to the database
-            foreach ($request->input('question') as $questionId => $answer) {
-                $answerBool = filter_var($answer, FILTER_VALIDATE_BOOLEAN);
+            try {
+                // Start the database transaction
+                DB::beginTransaction();
 
-                StudentResponse::create([
-                    'questionnaire_question_id' => $questionId,
-                    'student_questionnaire_id' => $studentQuestionnaire->id,
-                    'answer' => $answerBool,
+                // Create a new student questionnaire entry
+                $studentQuestionnaire = StudentQuestionnaire::create([
+                    'student_id' => $studentId,
+                    'questionnaire_id' => $questionnaireId,
+                ]);
+
+                // Save the student's responses to the database
+                foreach ($request->input('question') as $questionId => $answer) {
+                    $answerBool = filter_var($answer, FILTER_VALIDATE_BOOLEAN);
+
+                    StudentResponse::create([
+                        'questionnaire_question_id' => $questionId,
+                        'student_questionnaire_id' => $studentQuestionnaire->id,
+                        'answer' => $answerBool,
+                    ]);
+                }
+
+                DB::commit();
+
+                Log::info('Student questionnaire response submitted successfully', [
+                    'questionnaire_id' => $questionnaireId,
+                    'student_id' => $studentId,
+                ]);
+            } catch (\Exception $e) {
+                // Handle the exception if any error occurs during the transaction
+                DB::rollBack();
+
+                Log::error('Failed to submit student questionnaire response', [
+                    'questionnaire_id' => $questionnaireId,
+                    'student_id' => $studentId,
+                    'error_message' => $e->getMessage(),
                 ]);
             }
         }
