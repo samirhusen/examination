@@ -14,10 +14,8 @@ class QuestionnaireResponseController extends Controller
 {
     public function show($questionnaireId, $studentId, $uniqueIdentifier)
     {
-        // Get the questionnaire questions
         $questionnaireQuestions = QuestionnaireQuestion::where('questionnaire_id', $questionnaireId)->get();
 
-        // Get details of questionnaire
         $questionnaireDetail = Questionnaire::where('id', $questionnaireId)->get()->first();
 
         // Check if a response already exists for the given questionnaire and student
@@ -41,16 +39,14 @@ class QuestionnaireResponseController extends Controller
         if (!$existingResponse) {
 
             try {
-                // Start the database transaction
                 DB::beginTransaction();
 
-                // Create a new student questionnaire entry
                 $studentQuestionnaire = StudentQuestionnaire::create([
                     'student_id' => $studentId,
                     'questionnaire_id' => $questionnaireId,
                 ]);
 
-                // Save the student's responses to the database
+                // students responses to the db
                 foreach ($request->input('question') as $questionId => $answer) {
                     $answerBool = filter_var($answer, FILTER_VALIDATE_BOOLEAN);
 
@@ -68,7 +64,6 @@ class QuestionnaireResponseController extends Controller
                     'student_id' => $studentId,
                 ]);
             } catch (\Exception $e) {
-                // Handle the exception if any error occurs during the transaction
                 DB::rollBack();
 
                 Log::error('Failed to submit student questionnaire response', [
@@ -79,7 +74,6 @@ class QuestionnaireResponseController extends Controller
             }
         }
 
-        // Redirect to a success page or any other desired location
         return view('questionnaire.response.submit');
     }
 

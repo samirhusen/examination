@@ -15,13 +15,11 @@ class StudentResponse extends Model
         'answer'
     ];
 
-    // Define the many-to-one relationship with the StudentQuestionnaire model
     public function studentQuestionnaire()
     {
         return $this->belongsTo(StudentQuestionnaire::class, 'student_questionnaire_id');
     }
 
-    // Define the one-to-one relationship with the QuestionnaireQuestion model
     public function questionnaireQuestion()
     {
         return $this->belongsTo(QuestionnaireQuestion::class, 'questionnaire_question_id');
